@@ -3,7 +3,7 @@ const graphqlHttp = require('express-graphql');
 const { buildSchema } = require('graphql');
 const mongoose = require('mongoose');
 
-const Card = require('./models/event');
+const Card = require('./models/card');
 
 const app = express();
 
