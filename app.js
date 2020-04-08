@@ -1,11 +1,11 @@
-const express = require('express')
-const graphqlHttp = require('express-graphql')
-const { buildSchema } = require('graphql')
-const mongoose = require('mongoose')
+const express = require('express');
+const graphqlHttp = require('express-graphql');
+const { buildSchema } = require('graphql');
+const mongoose = require('mongoose');
+
+const Card = require('./models/event');
 
 const app = express();
-
-const events = [];
 
 app.use(express.json())
 
@@ -13,27 +13,27 @@ app.use(
     '/graphql', 
     graphqlHttp({
         schema: buildSchema(`
-            type Event {
+            type Card {
                 _id: ID!
                 title: String!
-                description: String!
-                price: Float!
-                date: String
+                question: String!
+                answer: String!
+                date: String!
             }
 
-            input EventInput {
+            input CardInput {
                 title: String!
-                description: String!
-                price: Float!
+                question: String!
+                answer: String!
                 date: String!
             }
 
             type RootQuery {
-                events: [Event!]!
+                cards: [Card!]!
             }
 
             type RootMutation {
-                createEvent(eventInput: EventInput): Event
+                createCard(cardInput: CardInput): Card
             }
 
             schema {
@@ -42,26 +42,36 @@ app.use(
             }
         `),
         rootValue: {
-            events: () => {
-                return events
+            cards: () => {
+                return Card.find().then(cards => {
+                    return cards.map(card => {
+                        return { ...card._doc, _id: card.id };
+                    })
+                }).catch(err => {
+                    throw err;
+                })
             },
-            createEvent: (args) => {
-                const event = {
-                    _id: Math.random().toString(),
-                    title: args.eventInput.title,
-                    description: args.eventInput.description,
-                    price: +args.eventInput.price,
-                    date: args.eventInput.date
-                };
-                events.push(event)
-                return event;
+            createCard: args => {
+                const card = new Card({
+                    title: args.cardInput.title,
+                    question: args.cardInput.question,
+                    answer: args.cardInput.answer,
+                    date: new Date(args.cardInput.date)
+                });
+                return card.save()
+                .then(result => {
+                    return {...result._doc};
+                })
+                .catch(err => {
+                    throw err;
+                });
             }
         },
         graphiql: true
     })
 );
 
-mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-ixzwl.mongodb.net/test?retryWrites=true&w=majority`)
+mongoose.connect(`mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0-ixzwl.mongodb.net/${process.env.MONGO_DB}?retryWrites=true&w=majority`)
 .then(() => {
     app.listen(3000);
 })
